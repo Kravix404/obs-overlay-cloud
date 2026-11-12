@@ -534,4 +534,12 @@ function startResize(e, el) {
 };
 </script>
 </body>
+    <script>
+    // Перезагрузка страницы после каждого действия мышью
+    document.addEventListener('click', () => {
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    });
+</script>
 </html>
