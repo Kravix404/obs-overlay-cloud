@@ -1,1 +1,503 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактор оверлея OBS (1920x1080)</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body {
+            margin: 0;
+            background: #121214;
+            color: #fff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 340px;
+            background: #1e1e24;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            border-right: 1px solid #333;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        h3 { margin: 0 0 5px 0; font-size: 16px; color: #a1a1aa; }
+        button {
+            padding: 10px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover { background: #2563eb; }
+        button.danger { background: #ef4444; }
+        button.danger:hover { background: #dc2626; }
+        
+        .box-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #27272a;
+            padding: 10px;
+            border-radius: 6px;
+        }
 
+        .presets {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            background: #27272a;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .preset-btn {
+            background: #3f3f46;
+            font-size: 13px;
+            text-align: left;
+            padding: 8px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .preset-btn:hover { background: #52525b; }
+
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            background: #27272a;
+            border: 1px solid #3f3f46;
+            color: white;
+            border-radius: 5px;
+            margin-top: 4px;
+        }
+        label { font-size: 13px; color: #d4d4d8; display: block; margin-top: 8px; }
+        
+        .workspace {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #09090b;
+            position: relative;
+            padding: 20px;
+            overflow: hidden;
+        }
+        #stage-wrapper {
+            position: relative;
+            border: 2px solid #3b82f6;
+            background-image: 
+                linear-gradient(45deg, #18181b 25%, transparent 25%), 
+                linear-gradient(-45deg, #18181b 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #18181b 75%), 
+                linear-gradient(-45deg, transparent 75%, #18181b 75%);
+            background-size: 40px 40px;
+            background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        #stage {
+            width: 1920px;
+            height: 1080px;
+            transform-origin: top left;
+            position: relative;
+        }
+        .item {
+            position: absolute;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed transparent;
+            border-radius: 8px;
+        }
+        .item:hover { border-color: rgba(59, 130, 246, 0.5); }
+        .item.selected { border: 2px solid #3b82f6; }
+        .item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
+        .item iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
+        
+        .resizer {
+            width: 20px;
+            height: 20px;
+            background: #3b82f6;
+            position: absolute;
+            right: -10px;
+            bottom: -10px;
+            cursor: nwse-resize;
+            border-radius: 50%;
+            display: none;
+            z-index: 10;
+        }
+        .item.selected .resizer { display: block; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h3>Добавить на экран</h3>
+    <button id="addTextBtn">+ Добавить текст</button>
+    <button id="uploadImgBtn">+ Загрузить картинку / GIF с ПК</button>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+
+    <h3 style="margin-top: 5px;">Картинка по ссылке:</h3>
+    <div class="box-section">
+        <input type="text" id="imageUrlInput" placeholder="https://.../image.gif">
+        <button id="addUrlBtn">+ Добавить картинку</button>
+    </div>
+
+    <h3 style="margin-top: 5px;">Внешний виджет / Чат (iframe):</h3>
+    <div class="box-section">
+        <input type="text" id="widgetUrlInput" placeholder="https://chat.eblo.id/..." value="https://chat.eblo.id/chat/overlay/?config=6khNoxRU">
+        <button id="addWidgetBtn">+ Добавить виджет на холст</button>
+    </div>
+
+    <h3 style="margin-top: 5px;">Быстрые пресеты:</h3>
+    <div class="presets">
+        <button class="preset-btn" data-url="https://media.giphy.com/media/3o7TKSjRrfIPjeiOkM/giphy.gif">⚡ Анимированный салют (GIF)</button>
+        <button class="preset-btn" data-url="https://i.imgur.com/39b7uWd.png">❤️ Сердечко</button>
+    </div>
+
+    <hr style="border-color:#333; width:100%">
+
+    <div id="propsPanel" style="display:none">
+        <h3>Настройки элемента</h3>
+        <div id="textProps">
+            <label>Текст:</label>
+            <textarea id="propText" rows="3"></textarea>
+            <label>Размер шрифта (px):</label>
+            <input type="number" id="propFontSize">
+            <label>Цвет текста:</label>
+            <input type="color" id="propColor">
+            <label><input type="checkbox" id="propBg"> Тёмная подложка</label>
+        </div>
+
+        <label>Прозрачность:</label>
+        <input type="range" id="propOpacity" min="0.1" max="1" step="0.05">
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <div><label>X:</label><input type="number" id="propX"></div>
+            <div><label>Y:</label><input type="number" id="propY"></div>
+        </div>
+
+        <button class="danger" id="deleteBtn" style="width:100%; margin-top:15px;">Удалить элемент</button>
+    </div>
+</div>
+
+<div class="workspace" id="workspace">
+    <div id="stage-wrapper">
+        <div id="stage"></div>
+    </div>
+</div>
+
+<script>
+    const ws = new WebSocket(`ws://${location.host}`);
+    const stage = document.getElementById('stage');
+    const wrapper = document.getElementById('stage-wrapper');
+    const workspace = document.getElementById('workspace');
+
+    let elements = [];
+    let selectedId = null;
+    let currentScale = 1;
+    let isDraggingOrResizing = false;
+
+    function fitStage() {
+        const pad = 40;
+        const scaleX = (workspace.clientWidth - pad) / 1920;
+        const scaleY = (workspace.clientHeight - pad) / 1080;
+        currentScale = Math.min(scaleX, scaleY);
+        stage.style.transform = `scale(${currentScale})`;
+        wrapper.style.width = (1920 * currentScale) + 'px';
+        wrapper.style.height = (1080 * currentScale) + 'px';
+    }
+    window.addEventListener('resize', fitStage);
+    fitStage();
+
+    ws.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'SYNC' && msg.elements) {
+                if (!isDraggingOrResizing) {
+                    elements = msg.elements;
+                    renderStage();
+                    if (selectedId) {
+                        const el = elements.find(item => item.id === selectedId);
+                        if (el) updateInputs(el);
+                        else selectElement(null);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    function syncServer() {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'UPDATE_ALL', elements }));
+        }
+    }
+
+    function addElement(type, content, width = 400, height = 400) {
+        const el = {
+            id: 'el_' + Date.now(),
+            type: type,
+            content: content,
+            x: 760, y: 340, width: width, height: height, opacity: 1
+        };
+        elements.push(el);
+        selectElement(el.id);
+        renderStage();
+        syncServer();
+    }
+
+    document.getElementById('addTextBtn').onclick = () => {
+        const el = {
+            id: 'el_' + Date.now(),
+            type: 'text',
+            content: 'Новый текст',
+            x: 700, y: 450, width: 450, height: 100,
+            fontSize: 48, color: '#ffffff', bgColor: 'rgba(0,0,0,0.6)', opacity: 1
+        };
+        elements.push(el);
+        selectElement(el.id);
+        renderStage();
+        syncServer();
+    };
+
+    document.getElementById('addUrlBtn').onclick = () => {
+        const input = document.getElementById('imageUrlInput');
+        if (!input.value) return;
+        addElement('image', input.value.trim());
+        input.value = '';
+    };
+
+    document.getElementById('addWidgetBtn').onclick = () => {
+        const input = document.getElementById('widgetUrlInput');
+        if (!input.value) return;
+        addElement('iframe', input.value.trim(), 500, 600);
+    };
+
+    document.getElementById('uploadImgBtn').onclick = () => {
+        document.getElementById('fileInput').click();
+    };
+
+    document.getElementById('fileInput').onchange = async function() {
+        if (!this.files || !this.files[0]) return;
+        const formData = new FormData();
+        formData.append('image', this.files[0]);
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.url) {
+            addElement('image', data.url, 400, 400);
+        }
+        this.value = '';
+    };
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.onclick = () => {
+            addElement('image', btn.getAttribute('data-url'), 400, 400);
+        };
+    });
+
+    document.getElementById('deleteBtn').onclick = () => {
+        elements = elements.filter(item => item.id !== selectedId);
+        selectedId = null;
+        document.getElementById('propsPanel').style.display = 'none';
+        renderStage();
+        syncServer();
+    };
+
+    ['propText', 'propFontSize', 'propColor', 'propBg', 'propOpacity', 'propX', 'propY'].forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) {
+            elem.oninput = updateSelectedField;
+            elem.onchange = updateSelectedField;
+        }
+    });
+
+    // Умный рендеринг: создает элементы только если их нет, избегая перезагрузки iframe
+    function renderStage() {
+        const existingIds = new Set(elements.map(el => el.id));
+
+        // Удаляем те элементы, которых больше нет
+        Array.from(stage.children).forEach(child => {
+            if (!existingIds.has(child.id)) {
+                stage.removeChild(child);
+            }
+        });
+
+        elements.forEach(el => {
+            let div = document.getElementById(el.id);
+
+            if (!div) {
+                // Если элемента еще нет на холсте — создаем с нуля
+                div = document.createElement('div');
+                div.id = el.id;
+                div.className = 'item';
+
+                if (el.type === 'text') {
+                    div.className += ' text-box';
+                    div.textContent = el.content;
+                } else if (el.type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = el.content;
+                    div.appendChild(img);
+                } else if (el.type === 'iframe') {
+                    const iframe = document.createElement('iframe');
+                    iframe.src = el.content;
+                    div.appendChild(iframe);
+                }
+
+                const resizer = document.createElement('div');
+                resizer.className = 'resizer';
+                div.appendChild(resizer);
+
+                div.onmousedown = (e) => {
+                    e.stopPropagation();
+                    selectElement(el.id);
+                    if (e.target === resizer) {
+                        startResize(e, el);
+                    } else {
+                        startDrag(e, el);
+                    }
+                };
+
+                stage.appendChild(div);
+            } else {
+                // Если элемент уже есть, обновляем текст, если он изменился (не трогая iframe)
+                if (el.type === 'text' && div.textContent !== el.content) {
+                    div.textContent = el.content;
+                }
+            }
+
+            // Обновляем позицию и размеры плавно без пересоздания узла
+            div.className = 'item' + (el.id === selectedId ? ' selected' : '');
+            div.style.left = el.x + 'px';
+            div.style.top = el.y + 'px';
+            div.style.width = el.width + 'px';
+            div.style.height = el.height + 'px';
+            div.style.opacity = el.opacity ?? 1;
+
+            if (el.type === 'text') {
+                div.style.fontSize = el.fontSize + 'px';
+                div.style.color = el.color;
+                div.style.backgroundColor = el.bgColor;
+                div.style.padding = '10px 20px';
+                div.style.fontWeight = 'bold';
+            }
+        });
+    }
+
+    function startDrag(e, el) {
+        isDraggingOrResizing = true;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const origX = el.x;
+        const origY = el.y;
+
+        function onMove(ev) {
+            el.x = Math.round(origX + (ev.clientX - startX) / currentScale);
+            el.y = Math.round(origY + (ev.clientY - startY) / currentScale);
+            
+            const div = document.getElementById(el.id);
+            if (div) {
+                div.style.left = el.x + 'px';
+                div.style.top = el.y + 'px';
+            }
+            if (el.id === selectedId) updateInputs(el);
+        }
+
+        function onUp() {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            syncServer();
+            setTimeout(() => { isDraggingOrResizing = false; }, 100);
+        }
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    }
+
+    function startResize(e, el) {
+        isDraggingOrResizing = true;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const origW = el.width;
+        const origH = el.height;
+
+        function onMove(ev) {
+            el.width = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
+            el.height = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
+            
+            const div = document.getElementById(el.id);
+            if (div) {
+                div.style.width = el.width + 'px';
+                div.style.height = el.height + 'px';
+            }
+            if (el.id === selectedId) updateInputs(el);
+        }
+
+        function onUp() {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            syncServer();
+            setTimeout(() => { isDraggingOrResizing = false; }, 100);
+        }
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    }
+
+    function selectElement(id) {
+        selectedId = id;
+        const el = elements.find(item => item.id === id);
+        const panel = document.getElementById('propsPanel');
+        if (!el) {
+            panel.style.display = 'none';
+            renderStage();
+            return;
+        }
+        panel.style.display = 'block';
+        document.getElementById('textProps').style.display = el.type === 'text' ? 'block' : 'none';
+        updateInputs(el);
+        renderStage();
+    }
+
+    function updateInputs(el) {
+        document.getElementById('propX').value = el.x;
+        document.getElementById('propY').value = el.y;
+        document.getElementById('propOpacity').value = el.opacity ?? 1;
+        if (el.type === 'text') {
+            document.getElementById('propText').value = el.content;
+            document.getElementById('propFontSize').value = el.fontSize;
+            document.getElementById('propColor').value = el.color;
+            document.getElementById('propBg').checked = el.bgColor !== 'transparent';
+        }
+    }
+
+    function updateSelectedField() {
+        const el = elements.find(item => item.id === selectedId);
+        if (!el) return;
+        el.x = parseInt(document.getElementById('propX').value) || 0;
+        el.y = parseInt(document.getElementById('propY').value) || 0;
+        el.opacity = parseFloat(document.getElementById('propOpacity').value);
+        if (el.type === 'text') {
+            el.content = document.getElementById('propText').value;
+            el.fontSize = parseInt(document.getElementById('propFontSize').value) || 24;
+            el.color = document.getElementById('propColor').value;
+            el.bgColor = document.getElementById('propBg').checked ? 'rgba(0,0,0,0.6)' : 'transparent';
+        }
+        renderStage();
+        syncServer();
+    }
+
+    stage.onmousedown = () => selectElement(null);
+</script>
+</body>
+</html>
