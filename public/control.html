@@ -116,6 +116,7 @@
             justify-content: center;
             border: 2px dashed transparent;
             border-radius: 8px;
+            touch-action: none;
         }
         .item:hover { border-color: rgba(59, 130, 246, 0.5); }
         .item.selected { border: 2px solid #3b82f6; }
@@ -527,7 +528,11 @@ function startResize(e, el) {
         syncServer();
     }
 
-    stage.onmousedown = () => selectElement(null);
+    stage.onpointerdown = (e) => {
+    if (e.target === stage) {
+        selectElement(null);
+    }
+};
 </script>
 </body>
 </html>
