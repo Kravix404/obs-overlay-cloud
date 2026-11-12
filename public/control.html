@@ -359,15 +359,18 @@
                 resizer.className = 'resizer';
                 div.appendChild(resizer);
 
-                div.onmousedown = (e) => {
-                    e.stopPropagation();
-                    selectElement(el.id);
-                    if (e.target === resizer) {
-                        startResize(e, el);
-                    } else {
-                        startDrag(e, el);
-                    }
-                };
+                div.onpointerdown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    selectElement(el.id);
+
+    if (e.target === resizer) {
+        startResize(e, el);
+    } else {
+        startDrag(e, el);
+    }
+};
 
                 stage.appendChild(div);
             } else {
@@ -395,65 +398,91 @@
         });
     }
 
-    function startDrag(e, el) {
-        isDraggingOrResizing = true;
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const origX = el.x;
-        const origY = el.y;
+    
+function startDrag(e, el) {
+    isDraggingOrResizing = true;
 
-        function onMove(ev) {
-            el.x = Math.round(origX + (ev.clientX - startX) / currentScale);
-            el.y = Math.round(origY + (ev.clientY - startY) / currentScale);
-            
-            const div = document.getElementById(el.id);
-            if (div) {
-                div.style.left = el.x + 'px';
-                div.style.top = el.y + 'px';
-            }
-            if (el.id === selectedId) updateInputs(el);
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origX = el.x;
+    const origY = el.y;
+
+    const scale = stage.getBoundingClientRect().width / 1920;
+
+    function onMove(ev) {
+        el.x = Math.round(origX + (ev.clientX - startX) / scale);
+        el.y = Math.round(origY + (ev.clientY - startY) / scale);
+
+        const div = document.getElementById(el.id);
+        if (div) {
+            div.style.left = el.x + 'px';
+            div.style.top = el.y + 'px';
         }
 
-        function onUp() {
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-            syncServer();
-            setTimeout(() => { isDraggingOrResizing = false; }, 100);
-        }
-
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
+        if (el.id === selectedId) updateInputs(el);
     }
 
-    function startResize(e, el) {
-        isDraggingOrResizing = true;
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const origW = el.width;
-        const origH = el.height;
+    function onUp() {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
 
-        function onMove(ev) {
-            el.width = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
-            el.height = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
-            
-            const div = document.getElementById(el.id);
-            if (div) {
-                div.style.width = el.width + 'px';
-                div.style.height = el.height + 'px';
-            }
-            if (el.id === selectedId) updateInputs(el);
-        }
+        syncServer();
 
-        function onUp() {
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-            syncServer();
-            setTimeout(() => { isDraggingOrResizing = false; }, 100);
-        }
-
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
+        setTimeout(() => {
+            isDraggingOrResizing = false;
+        }, 100);
     }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+}
+
+function startResize(e, el) {
+    isDraggingOrResizing = true;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const origW = el.width;
+    const origH = el.height;
+
+    const scale = stage.getBoundingClientRect().width / 1920;
+
+    function onMove(ev) {
+        el.width = Math.max(
+            50,
+            Math.round(origW + (ev.clientX - startX) / scale)
+        );
+
+        el.height = Math.max(
+            50,
+            Math.round(origH + (ev.clientY - startY) / scale)
+        );
+
+        const div = document.getElementById(el.id);
+
+        if (div) {
+            div.style.width = el.width + 'px';
+            div.style.height = el.height + 'px';
+        }
+
+        if (el.id === selectedId) updateInputs(el);
+    }
+
+    function onUp() {
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+
+        syncServer();
+
+        setTimeout(() => {
+            isDraggingOrResizing = false;
+        }, 100);
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+}
+
 
     function selectElement(id) {
         selectedId = id;
