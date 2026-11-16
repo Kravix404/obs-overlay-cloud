@@ -25,11 +25,9 @@ const upload = multer({ storage: storage });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Файл для постоянного сохранения оверлея
 const SAVE_FILE = path.join(__dirname, 'overlay_state.json');
 let currentElements = [];
 
-// Загружаем сохраненные элементы при старте
 if (fs.existsSync(SAVE_FILE)) {
     try {
         currentElements = JSON.parse(fs.readFileSync(SAVE_FILE, 'utf8'));
@@ -52,7 +50,6 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message);
             if (data.type === 'UPDATE_ALL') {
                 currentElements = data.elements;
-                // Сохраняем на диск при каждом изменении
                 fs.writeFileSync(SAVE_FILE, JSON.stringify(currentElements, null, 2), 'utf8');
 
                 wss.clients.forEach(client => {
