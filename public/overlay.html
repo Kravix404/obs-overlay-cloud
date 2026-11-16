@@ -36,7 +36,7 @@
             height: 100%;
             border: none;
             background: transparent;
-            pointer-events: none; /* Чтобы клики и мышь в OBS проходили сквозь чат */
+            pointer-events: none;
         }
     </style>
 </head>
@@ -45,7 +45,7 @@
 
     <script>
         const canvas = document.getElementById('canvas');
-        const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://'; 
+        const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
         const ws = new WebSocket(`${protocol}${location.host}`);
 
         ws.onmessage = (event) => {
@@ -62,7 +62,6 @@
         function render(elements) {
             const existingIds = new Set(elements.map(el => el.id));
 
-            // Удаляем элементы, которых больше нет
             Array.from(canvas.children).forEach(child => {
                 if (!existingIds.has(child.id)) {
                     canvas.removeChild(child);
@@ -97,7 +96,6 @@
                     }
                 }
 
-                // Плавное обновление координат и размеров без перезагрузки iframe
                 div.style.left = el.x + 'px';
                 div.style.top = el.y + 'px';
                 div.style.width = el.width + 'px';
