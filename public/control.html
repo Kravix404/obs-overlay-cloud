@@ -196,8 +196,7 @@
 </div>
 
 <script>
-    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${wsProtocol}//${location.host}`);
+    const ws = new WebSocket(`ws://${location.host}`);
     const stage = document.getElementById('stage');
     const wrapper = document.getElementById('stage-wrapper');
     const workspace = document.getElementById('workspace');
@@ -223,6 +222,7 @@
         try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'SYNC' && msg.elements) {
+                // Если мы сами ничего не двигаем прямо сейчас — принимаем обновление извне
                 if (!isDraggingOrResizing) {
                     elements = msg.elements;
                     renderStage();
@@ -322,11 +322,9 @@
         }
     });
 
-    // Умный рендеринг: создает элементы только если их нет, избегая перезагрузки iframe
     function renderStage() {
         const existingIds = new Set(elements.map(el => el.id));
 
-        // Удаляем те элементы, которых больше нет
         Array.from(stage.children).forEach(child => {
             if (!existingIds.has(child.id)) {
                 stage.removeChild(child);
@@ -337,7 +335,6 @@
             let div = document.getElementById(el.id);
 
             if (!div) {
-                // Если элемента еще нет на холсте — создаем с нуля
                 div = document.createElement('div');
                 div.id = el.id;
                 div.className = 'item';
@@ -359,33 +356,32 @@
                 resizer.className = 'resizer';
                 div.appendChild(resizer);
 
-                div.onpointerdown = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    selectElement(el.id);
-
-    if (e.target === resizer) {
-        startResize(e, el);
-    } else {
-        startDrag(e, el);
-    }
-};
+                div.onmousedown = (e) => {
+                    e.stopPropagation();
+                    selectElement(el.id);
+                    if (e.target === resizer) {
+                        startResize(e, el);
+                    } else {
+                        startDrag(e, el);
+                    }
+                };
 
                 stage.appendChild(div);
             } else {
-                // Если элемент уже есть, обновляем текст, если он изменился (не трогая iframe)
                 if (el.type === 'text' && div.textContent !== el.content) {
                     div.textContent = el.content;
                 }
             }
 
-            // Обновляем позицию и размеры плавно без пересоздания узла
+            // Обновляем стили, только если элемент сейчас не перетаскивается пользователем
+            if (!isDraggingOrResizing || selectedId !== el.id) {
+                div.style.left = el.x + 'px';
+                div.style.top = el.y + 'px';
+                div.style.width = el.width + 'px';
+                div.style.height = el.height + 'px';
+            }
+
             div.className = 'item' + (el.id === selectedId ? ' selected' : '');
-            div.style.left = el.x + 'px';
-            div.style.top = el.y + 'px';
-            div.style.width = el.width + 'px';
-            div.style.height = el.height + 'px';
             div.style.opacity = el.opacity ?? 1;
 
             if (el.type === 'text') {
@@ -398,91 +394,76 @@
         });
     }
 
-    
-function startDrag(e, el) {
-    isDraggingOrResizing = true;
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origX = el.x;
-    const origY = el.y;
-
-    const scale = stage.getBoundingClientRect().width / 1920;
-
-    function onMove(ev) {
-        el.x = Math.round(origX + (ev.clientX - startX) / scale);
-        el.y = Math.round(origY + (ev.clientY - startY) / scale);
-
-        const div = document.getElementById(el.id);
-        if (div) {
-            div.style.left = el.x + 'px';
-            div.style.top = el.y + 'px';
-        }
-
-        if (el.id === selectedId) updateInputs(el);
-    }
-
-    function onUp() {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-
-        syncServer();
-
-        setTimeout(() => {
-            isDraggingOrResizing = false;
-        }, 100);
-    }
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-}
-
-function startResize(e, el) {
-    isDraggingOrResizing = true;
-
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const origW = el.width;
-    const origH = el.height;
-
-    const scale = stage.getBoundingClientRect().width / 1920;
-
-    function onMove(ev) {
-        el.width = Math.max(
-            50,
-            Math.round(origW + (ev.clientX - startX) / scale)
-        );
-
-        el.height = Math.max(
-            50,
-            Math.round(origH + (ev.clientY - startY) / scale)
-        );
-
+    function startDrag(e, el) {
+        isDraggingOrResizing = true;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const origX = el.x;
+        const origY = el.y;
         const div = document.getElementById(el.id);
 
-        if (div) {
-            div.style.width = el.width + 'px';
-            div.style.height = el.height + 'px';
+        function onMove(ev) {
+            // Двигаем прямо на экране плавно без перерисовки всей страницы
+            const newX = Math.round(origX + (ev.clientX - startX) / currentScale);
+            const newY = Math.round(origY + (ev.clientY - startY) / currentScale);
+            
+            if (div) {
+                div.style.left = newX + 'px';
+                div.style.top = newY + 'px';
+            }
+            // Обновляем поля в панели настроек на лету
+            document.getElementById('propX').value = newX;
+            document.getElementById('propY').value = newY;
         }
 
-        if (el.id === selectedId) updateInputs(el);
-    }
+        function onUp(ev) {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
 
-    function onUp() {
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
+            // Фиксируем финальные координаты в объекте
+            el.x = Math.round(origX + (ev.clientX - startX) / currentScale);
+            el.y = Math.round(origY + (ev.clientY - startY) / currentScale);
 
-        syncServer();
-
-        setTimeout(() => {
             isDraggingOrResizing = false;
-        }, 100);
+            syncServer(); // Отправляем на сервер один раз после завершения движения
+        }
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
     }
 
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-}
+    function startResize(e, el) {
+        isDraggingOrResizing = true;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const origW = el.width;
+        const origH = el.height;
+        const div = document.getElementById(el.id);
 
+        function onMove(ev) {
+            const newW = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
+            const newH = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
+            
+            if (div) {
+                div.style.width = newW + 'px';
+                div.style.height = newH + 'px';
+            }
+        }
+
+        function onUp(ev) {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+
+            el.width = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
+            el.height = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
+
+            isDraggingOrResizing = false;
+            syncServer();
+        }
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    }
 
     function selectElement(id) {
         selectedId = id;
@@ -527,19 +508,7 @@ function startResize(e, el) {
         syncServer();
     }
 
-    stage.onpointerdown = (e) => {
-    if (e.target === stage) {
-        selectElement(null);
-    }
-};
+    stage.onmousedown = () => selectElement(null);
 </script>
 </body>
-    <script>
-    // Перезагрузка страницы после каждого действия мышью
-    document.addEventListener('click', () => {
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
-    });
-</script>
 </html>
