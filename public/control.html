@@ -121,7 +121,7 @@
     let elements = [];
     let selectedId = null;
     let currentScale = 1;
-    let isLocked = false; // Флаг блокировки входящих WebSocket-обновлений во время перетаскивания
+    let isDraggingOrResizing = false;
 
     function fitStage() {
         const pad = 40;
@@ -139,7 +139,7 @@
         try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'SYNC' && msg.elements) {
-                if (!isLocked) {
+                if (!isDraggingOrResizing) {
                     elements = msg.elements;
                     renderStage();
                     if (selectedId) {
@@ -246,7 +246,6 @@
                 resizer.className = 'resizer';
                 div.appendChild(resizer);
 
-                // Обработчики мыши для перетаскивания и ресайза
                 div.onmousedown = (e) => {
                     e.stopPropagation();
                     selectElement(el.id);
@@ -264,8 +263,7 @@
                 }
             }
 
-            // Обновляем геометрию, только если сейчас не идет процесс перетаскивания этого элемента
-            if (!isLocked || selectedId !== el.id) {
+            if (!isDraggingOrResizing || selectedId !== el.id) {
                 div.style.left = el.x + 'px';
                 div.style.top = el.y + 'px';
                 div.style.width = el.width + 'px';
@@ -286,7 +284,7 @@
     }
 
     function startDrag(e, el) {
-        isLocked = true;
+        isDraggingOrResizing = true;
         const startX = e.clientX;
         const startY = e.clientY;
         const origX = el.x;
@@ -294,23 +292,26 @@
         const div = document.getElementById(el.id);
 
         function onMouseMove(ev) {
-            const dx = (ev.clientX - startX) / currentScale;
-            const dy = (ev.clientY - startY) / currentScale;
-            el.x = Math.round(origX + dx);
-            el.y = Math.round(origY + dy);
-
+            const newX = Math.round(origX + (ev.clientX - startX) / currentScale);
+            const newY = Math.round(origY + (ev.clientY - startY) / currentScale);
+            
             if (div) {
-                div.style.left = el.x + 'px';
-                div.style.top = el.y + 'px';
+                div.style.left = newX + 'px';
+                div.style.top = newY + 'px';
             }
-            updateInputs(el);
+            document.getElementById('propX').value = newX;
+            document.getElementById('propY').value = newY;
         }
 
-        function onMouseUp() {
+        function onMouseUp(ev) {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
-            isLocked = false;
-            syncServer();
+
+            el.x = Math.round(origX + (ev.clientX - startX) / currentScale);
+            el.y = Math.round(origY + (ev.clientY - startY) / currentScale);
+
+            isDraggingOrResizing = false;
+            syncServer(); // Сохранение и отправка на сервер при отпускании мыши
         }
 
         window.addEventListener('mousemove', onMouseMove);
@@ -318,7 +319,7 @@
     }
 
     function startResize(e, el) {
-        isLocked = true;
+        isDraggingOrResizing = true;
         const startX = e.clientX;
         const startY = e.clientY;
         const origW = el.width;
@@ -326,23 +327,24 @@
         const div = document.getElementById(el.id);
 
         function onMouseMove(ev) {
-            const dw = (ev.clientX - startX) / currentScale;
-            const dh = (ev.clientY - startY) / currentScale;
-            el.width = Math.max(50, Math.round(origW + dw));
-            el.height = Math.max(50, Math.round(origH + dh));
-
+            const newW = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
+            const newH = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
+            
             if (div) {
-                div.style.width = el.width + 'px';
-                div.style.height = el.height + 'px';
+                div.style.width = newW + 'px';
+                div.style.height = newH + 'px';
             }
-            updateInputs(el);
         }
 
-        function onMouseUp() {
+        function onMouseUp(ev) {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
-            isLocked = false;
-            syncServer();
+
+            el.width = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
+            el.height = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
+
+            isDraggingOrResizing = false;
+            syncServer(); // Сохранение и отправка на сервер при отпускании мыши
         }
 
         window.addEventListener('mousemove', onMouseMove);
