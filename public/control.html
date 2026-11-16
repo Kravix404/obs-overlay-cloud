@@ -6,133 +6,48 @@
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
-            margin: 0;
-            background: #121214;
-            color: #fff;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
+            margin: 0; background: #121214; color: #fff; display: flex; height: 100vh; overflow: hidden;
         }
         .sidebar {
-            width: 340px;
-            background: #1e1e24;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            border-right: 1px solid #333;
-            overflow-y: auto;
-            flex-shrink: 0;
+            width: 340px; background: #1e1e24; padding: 20px; display: flex; flex-direction: column; gap: 15px; border-right: 1px solid #333; overflow-y: auto; flex-shrink: 0;
         }
         h3 { margin: 0 0 5px 0; font-size: 16px; color: #a1a1aa; }
         button {
-            padding: 10px;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
+            padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;
         }
         button:hover { background: #2563eb; }
         button.danger { background: #ef4444; }
         button.danger:hover { background: #dc2626; }
-        
-        .box-section {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            background: #27272a;
-            padding: 10px;
-            border-radius: 6px;
-        }
-
-        .presets {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            background: #27272a;
-            padding: 10px;
-            border-radius: 6px;
+        .box-section, .presets {
+            display: flex; flex-direction: column; gap: 6px; background: #27272a; padding: 10px; border-radius: 6px;
         }
         .preset-btn {
-            background: #3f3f46;
-            font-size: 13px;
-            text-align: left;
-            padding: 8px;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            background: #3f3f46; font-size: 13px; text-align: left; padding: 8px; color: white; border: none; border-radius: 4px; cursor: pointer;
         }
         .preset-btn:hover { background: #52525b; }
-
         input, textarea {
-            width: 100%;
-            padding: 8px;
-            background: #27272a;
-            border: 1px solid #3f3f46;
-            color: white;
-            border-radius: 5px;
-            margin-top: 4px;
+            width: 100%; padding: 8px; background: #27272a; border: 1px solid #3f3f46; color: white; border-radius: 5px; margin-top: 4px;
         }
         label { font-size: 13px; color: #d4d4d8; display: block; margin-top: 8px; }
-        
         .workspace {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #09090b;
-            position: relative;
-            padding: 20px;
-            overflow: hidden;
+            flex: 1; display: flex; align-items: center; justify-content: center; background: #09090b; position: relative; padding: 20px; overflow: hidden;
         }
         #stage-wrapper {
-            position: relative;
-            border: 2px solid #3b82f6;
-            background-image: 
-                linear-gradient(45deg, #18181b 25%, transparent 25%), 
-                linear-gradient(-45deg, #18181b 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #18181b 75%), 
-                linear-gradient(-45deg, transparent 75%, #18181b 75%);
-            background-size: 40px 40px;
-            background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.8);
-            overflow: hidden;
+            position: relative; border: 2px solid #3b82f6;
+            background-image: linear-gradient(45deg, #18181b 25%, transparent 25%), linear-gradient(-45deg, #18181b 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #18181b 75%), linear-gradient(-45deg, transparent 75%, #18181b 75%);
+            background-size: 40px 40px; background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8); overflow: hidden;
         }
-        #stage {
-            width: 1920px;
-            height: 1080px;
-            transform-origin: top left;
-            position: relative;
-        }
+        #stage { width: 1920px; height: 1080px; transform-origin: top left; position: relative; }
         .item {
-            position: absolute;
-            cursor: move;
-            user-select: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px dashed transparent;
-            border-radius: 8px;
+            position: absolute; cursor: move; user-select: none; display: flex; align-items: center; justify-content: center; border: 2px dashed transparent; border-radius: 8px;
         }
         .item:hover { border-color: rgba(59, 130, 246, 0.5); }
-        .item.selected { border: 2px solid #3b82f6; }
+        .item.selected { border: 2px solid #3b82f6; z-index: 100; }
         .item img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; display: block; }
         .item iframe { width: 100%; height: 100%; border: none; pointer-events: none; }
-        
         .resizer {
-            width: 20px;
-            height: 20px;
-            background: #3b82f6;
-            position: absolute;
-            right: -10px;
-            bottom: -10px;
-            cursor: nwse-resize;
-            border-radius: 50%;
-            display: none;
-            z-index: 10;
+            width: 20px; height: 20px; background: #3b82f6; position: absolute; right: -10px; bottom: -10px; cursor: nwse-resize; border-radius: 50%; display: none; z-index: 10;
         }
         .item.selected .resizer { display: block; }
     </style>
@@ -206,7 +121,7 @@
     let elements = [];
     let selectedId = null;
     let currentScale = 1;
-    let isDraggingOrResizing = false;
+    let isLocked = false; // Флаг блокировки входящих WebSocket-обновлений во время перетаскивания
 
     function fitStage() {
         const pad = 40;
@@ -224,7 +139,7 @@
         try {
             const msg = JSON.parse(event.data);
             if (msg.type === 'SYNC' && msg.elements) {
-                if (!isDraggingOrResizing) {
+                if (!isLocked) {
                     elements = msg.elements;
                     renderStage();
                     if (selectedId) {
@@ -234,9 +149,7 @@
                     }
                 }
             }
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     };
 
     function syncServer() {
@@ -247,64 +160,43 @@
 
     function addElement(type, content, width = 400, height = 400) {
         const el = {
-            id: 'el_' + Date.now(),
-            type: type,
-            content: content,
-            x: 760, y: 340, width: width, height: height, opacity: 1
+            id: 'el_' + Date.now(), type, content, x: 760, y: 340, width, height, opacity: 1
         };
+        if (type === 'text') {
+            el.fontSize = 48; el.color = '#ffffff'; el.bgColor = 'rgba(0,0,0,0.6)';
+        }
         elements.push(el);
         selectElement(el.id);
         renderStage();
         syncServer();
     }
 
-    document.getElementById('addTextBtn').onclick = () => {
-        const el = {
-            id: 'el_' + Date.now(),
-            type: 'text',
-            content: 'Новый текст',
-            x: 700, y: 450, width: 450, height: 100,
-            fontSize: 48, color: '#ffffff', bgColor: 'rgba(0,0,0,0.6)', opacity: 1
-        };
-        elements.push(el);
-        selectElement(el.id);
-        renderStage();
-        syncServer();
-    };
-
+    document.getElementById('addTextBtn').onclick = () => addElement('text', 'Новый текст', 450, 100);
     document.getElementById('addUrlBtn').onclick = () => {
         const input = document.getElementById('imageUrlInput');
         if (!input.value) return;
         addElement('image', input.value.trim());
         input.value = '';
     };
-
     document.getElementById('addWidgetBtn').onclick = () => {
         const input = document.getElementById('widgetUrlInput');
         if (!input.value) return;
         addElement('iframe', input.value.trim(), 500, 600);
     };
-
-    document.getElementById('uploadImgBtn').onclick = () => {
-        document.getElementById('fileInput').click();
-    };
-
+    document.getElementById('uploadImgBtn').onclick = () => document.getElementById('fileInput').click();
+    
     document.getElementById('fileInput').onchange = async function() {
         if (!this.files || !this.files[0]) return;
         const formData = new FormData();
         formData.append('image', this.files[0]);
         const res = await fetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.url) {
-            addElement('image', data.url, 400, 400);
-        }
+        if (data.url) addElement('image', data.url, 400, 400);
         this.value = '';
     };
 
     document.querySelectorAll('.preset-btn').forEach(btn => {
-        btn.onclick = () => {
-            addElement('image', btn.getAttribute('data-url'), 400, 400);
-        };
+        btn.onclick = () => addElement('image', btn.getAttribute('data-url'), 400, 400);
     });
 
     document.getElementById('deleteBtn').onclick = () => {
@@ -325,11 +217,8 @@
 
     function renderStage() {
         const existingIds = new Set(elements.map(el => el.id));
-
         Array.from(stage.children).forEach(child => {
-            if (!existingIds.has(child.id)) {
-                stage.removeChild(child);
-            }
+            if (!existingIds.has(child.id)) stage.removeChild(child);
         });
 
         elements.forEach(el => {
@@ -357,6 +246,7 @@
                 resizer.className = 'resizer';
                 div.appendChild(resizer);
 
+                // Обработчики мыши для перетаскивания и ресайза
                 div.onmousedown = (e) => {
                     e.stopPropagation();
                     selectElement(el.id);
@@ -374,7 +264,8 @@
                 }
             }
 
-            if (!isDraggingOrResizing || selectedId !== el.id) {
+            // Обновляем геометрию, только если сейчас не идет процесс перетаскивания этого элемента
+            if (!isLocked || selectedId !== el.id) {
                 div.style.left = el.x + 'px';
                 div.style.top = el.y + 'px';
                 div.style.width = el.width + 'px';
@@ -395,71 +286,67 @@
     }
 
     function startDrag(e, el) {
-        isDraggingOrResizing = true;
+        isLocked = true;
         const startX = e.clientX;
         const startY = e.clientY;
         const origX = el.x;
         const origY = el.y;
         const div = document.getElementById(el.id);
 
-        function onMove(ev) {
-            const newX = Math.round(origX + (ev.clientX - startX) / currentScale);
-            const newY = Math.round(origY + (ev.clientY - startY) / currentScale);
-            
+        function onMouseMove(ev) {
+            const dx = (ev.clientX - startX) / currentScale;
+            const dy = (ev.clientY - startY) / currentScale;
+            el.x = Math.round(origX + dx);
+            el.y = Math.round(origY + dy);
+
             if (div) {
-                div.style.left = newX + 'px';
-                div.style.top = newY + 'px';
+                div.style.left = el.x + 'px';
+                div.style.top = el.y + 'px';
             }
-            document.getElementById('propX').value = newX;
-            document.getElementById('propY').value = newY;
+            updateInputs(el);
         }
 
-        function onUp(ev) {
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-
-            el.x = Math.round(origX + (ev.clientX - startX) / currentScale);
-            el.y = Math.round(origY + (ev.clientY - startY) / currentScale);
-
-            isDraggingOrResizing = false;
+        function onMouseUp() {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            isLocked = false;
             syncServer();
         }
 
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
     }
 
     function startResize(e, el) {
-        isDraggingOrResizing = true;
+        isLocked = true;
         const startX = e.clientX;
         const startY = e.clientY;
         const origW = el.width;
         const origH = el.height;
         const div = document.getElementById(el.id);
 
-        function onMove(ev) {
-            const newW = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
-            const newH = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
-            
+        function onMouseMove(ev) {
+            const dw = (ev.clientX - startX) / currentScale;
+            const dh = (ev.clientY - startY) / currentScale;
+            el.width = Math.max(50, Math.round(origW + dw));
+            el.height = Math.max(50, Math.round(origH + dh));
+
             if (div) {
-                div.style.width = newW + 'px';
-                div.style.height = newH + 'px';
+                div.style.width = el.width + 'px';
+                div.style.height = el.height + 'px';
             }
+            updateInputs(el);
         }
 
-        function onUp(ev) {
-            window.removeEventListener('mousemove', onMove);
-            window.removeEventListener('mouseup', onUp);
-
-            el.width = Math.max(50, Math.round(origW + (ev.clientX - startX) / currentScale));
-            el.height = Math.max(50, Math.round(origH + (ev.clientY - startY) / currentScale));
-
-            isDraggingOrResizing = false;
+        function onMouseUp() {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            isLocked = false;
             syncServer();
         }
 
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onUp);
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
     }
 
     function selectElement(id) {
@@ -505,7 +392,9 @@
         syncServer();
     }
 
-    stage.onmousedown = () => selectElement(null);
+    stage.onmousedown = (e) => {
+        if (e.target === stage) selectElement(null);
+    };
 </script>
 </body>
 </html>
